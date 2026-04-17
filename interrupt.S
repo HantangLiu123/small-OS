@@ -1,14 +1,27 @@
 .section .text
-.global switch_to
+.global interrupt_init
+.global trap_entry
+.extern c_trap_handler
+.extern tasks
+.extern current_task
+.extern active_tasks
+.extern mult
 
-# switch_to(uint32_t *old_sp, uint32_t new_sp)
-# a0: 指向当前任务 sp 成员的地址
-# a1: 下一个任务的 sp 值
-switch_to:
-    # 1. 在当前栈上开辟空间，保存上下文
+.equ TASK_SIZE, 4
+
+interrupt_init:
+    la t0, trap_entry
+    csrw mtvec, t0      # 设置中断入口
+    li t0, 0x8          # mstatus.MIE
+    csrs mstatus, t0
+    li t0, 0x800        # mie.MEIE (外部中断，DE1-SoC Timer通常接此)
+    csrs mie, t0
+    ret
+
+.align 4
+trap_entry:
     addi sp, sp, -124
-    sw ra, 120(sp)  # 120: address of task stopped
-    sw ra, 116(sp)  # 116: data in ra
+    sw ra, 116(sp)
     sw gp, 112(sp)
     sw tp, 108(sp)
     sw t0, 104(sp)
@@ -39,19 +52,33 @@ switch_to:
     sw a6, 4(sp)
     sw a7, 0(sp)
 
-    # 2. 保存旧栈指针到 TCB
-    sw sp, 0(a0)
+    csrr t0, mepc
+    sw t0, 120(sp)
 
-    # 3. 切换到新栈指针
-    mv sp, a1
+    call c_trap_handler
 
-    # 4. 从新栈中恢复上下文
-    lw ra, 120(sp)
-    la t0, switch_ret
-    bne ra, t0, load_other
+    beqz a0, trap_ret
+
+    la s0, current_task
+    li t0, (s0)
+    la s1, active_tasks
+    li t1, (s1)
+    addi t0, t0, 1
+    ble t0, t1, switch_task
+    mv t0, zero
+switch_task:
+    sw t0, (s0)
+    la s2, tasks
+    li a0, TASK_SIZE
+    mv a1, t0
+    call mult
+    add s2, s2, a0
+    lw sp, (s2)
+
+trap_ret:
+    lw t0, 120(sp)
+    csrw t0, mepc
     lw ra, 116(sp)
-
-load_other:
     lw gp, 112(sp)
     lw tp, 108(sp)
     lw t0, 104(sp)
@@ -83,7 +110,5 @@ load_other:
     lw a7, 0(sp)
     addi sp, sp, 124
 
-    # 5. 返回。此时 ra 已经是新任务的地址了！
-    csrsi mstatus, 0x8 # 开启中断
-switch_ret:
-    ret
+    mret
+    

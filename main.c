@@ -3,21 +3,8 @@
 
 TCB tasks[MAX_TASKS];
 uint32_t task_stacks[MAX_TASKS][STACK_SIZE];
-uint8_t current_task = 0;
-uint8_t active_tasks = 0; // 记录实际注册的任务数
-
-extern void switch_to(uint32_t *old_sp, uint32_t new_sp);
-
-void yield()
-{
-    if (active_tasks < 2)
-        return; // 只有一个任务时没必要切换
-
-    uint8_t old_task = current_task;
-    current_task = (current_task + 1) % active_tasks; // 只在已注册的任务中轮转
-
-    switch_to(&tasks[old_task].sp, tasks[current_task].sp);
-}
+int current_task = 0;
+int active_tasks = 0; // 记录实际注册的任务数
 
 // 任务 0：流水灯 (保持不变)
 void task_led()
@@ -60,31 +47,9 @@ void task_hex()
     }
 }
 
-// 任务初始化逻辑修正
-void task_init(uint8_t id, void (*task_func)(void))
-{
-    // 确保 id 不超过数组范围
-    if (id >= MAX_TASKS)
-        return;
-
-    uint32_t *sp = &task_stacks[id][STACK_SIZE];
-
-    // RISC-V 栈帧构造 (与 switch_to 汇编匹配)
-    // 我们需要预留 13 个寄存器的位置 (s0-s11 + ra)
-    sp -= 13;
-
-    // 重点：sp[12] 对应汇编里的 48(sp)，即 ra
-    sp[12] = (uint32_t)task_func;
-
-    // 记录初始化的栈指针
-    tasks[id].sp = (uint32_t)sp;
-
-    if (id >= active_tasks)
-        active_tasks = id + 1;
-}
-
 int main()
 {
+    __asm__ volatile("csrci mstatus, 0x8");
     // 1. 初始化任务
     task_init(0, task_led);
     task_init(1, task_hex);
@@ -93,6 +58,8 @@ int main()
     // 我们需要一个临时变量来保存当前的上下文（虽然这个上下文再也不会被用到了）
     uint32_t dummy_sp;
     current_task = 0;
+    timer_init(50000000);
+    interrupt_init();
 
     // 从这里“跳”进任务 0 的代码世界
     switch_to(&dummy_sp, tasks[0].sp);
