@@ -1,0 +1,7 @@
+*.bat
+*.ini
+*.o
+*.elf
+*.ini
+*.DS_Store
+.vscode/
