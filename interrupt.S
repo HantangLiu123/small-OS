@@ -7,9 +7,10 @@
 interrupt_init:
     la t0, trap_entry
     csrw mtvec, t0      # 设置中断入口
-    li t0, 0x800        # mie.MEIE (外部中断，DE1-SoC Timer通常接此)
+    li t0, 0x10000        # mie.MEIE (外部中断，DE1-SoC Timer通常接此)
     csrs mie, t0
-    csrsi mstatus, 0x8
+    li t0, 0x8
+    csrs mstatus, t0
     ret
 
 trap_entry:
@@ -123,9 +124,14 @@ trap_entry:
 yield:
     li a7, 0
     ecall
+    ret
 
 # void start_first_task(TCB *task)
 start_first_task:
+
+    li t0, 0x80
+    csrs mstatus, t0
+
     mv t6, a0
 
     lw ra,   0(t6)
