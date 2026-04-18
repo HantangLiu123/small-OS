@@ -3,8 +3,6 @@
 .global yield
 .extern c_trap_handler
 
-.equ TASK_SIZE, 4
-
 interrupt_init:
     la t0, trap_entry
     csrw mtvec, t0      # 设置中断入口
@@ -15,19 +13,28 @@ interrupt_init:
 
 trap_entry:
     # -------- 找 current task --------
+    addi sp, sp, -16
+    sw t0, 0(sp)
+    sw t1, 4(sp)
+    sw t2, 8(sp)
+    sw a0, 12(sp)
+
     la t0, current_task
     lw t1, 0(t0)
 
     la t2, tasks
-    li t3, 128
-    mul t1, t1, t3
+    slli t1, t1, 7
     add t2, t2, t1   # t2 = current TCB
 
     mv a0, t2        # a0 = current
 
+    lw t0, 0(sp)
+    lw t1, 4(sp)
+    lw t2, 8(sp)
+
     # -------- 保存寄存器 --------
     sw ra,   0(a0)
-    sw sp,   4(a0)
+    # sw sp,   4(a0)
     sw gp,   8(a0)
     sw tp,   12(a0)
     sw t0,   16(a0)
@@ -35,7 +42,7 @@ trap_entry:
     sw t2,   24(a0)
     sw s0,   28(a0)
     sw s1,   32(a0)
-    sw a0,   36(a0)
+    # sw a0,   36(a0)
     sw a1,   40(a0)
     sw a2,   44(a0)
     sw a3,   48(a0)
@@ -57,6 +64,11 @@ trap_entry:
     sw t4,   112(a0)
     sw t5,   116(a0)
     sw t6,   120(a0)
+
+    lw t0, 12(sp) # original a0
+    sw t0, 36(a0)
+    addi sp, sp, 16
+    sw sp,   4(a0)
 
     csrr t0, mepc
     sw t0, 124(a0)
@@ -110,4 +122,3 @@ trap_entry:
 yield:
     li a7, 0
     ecall
-
