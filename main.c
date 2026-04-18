@@ -20,7 +20,7 @@ void task_led()
 
         for (volatile int i = 0; i < 200000; i++)
             ; // 增加延时防止切得太快
-        yield();
+        //yield();
     }
 }
 
@@ -49,12 +49,13 @@ void task_hex()
 
 int main()
 {
-    __asm__ volatile("csrci mstatus, 0x8");
-    timer_init(50000000);
-    interrupt_init();
+    int mie_value = 0x8;
+    __asm__ volatile("csrc mstatus, %0"::"r"(mie_value));
     // 初始化任务
     task_init(0, task_led);
     task_init(1, task_hex);
+    timer_init(100000);
+    interrupt_init();
 
     current_task = 0;
     start_first_task(&tasks[0]);
