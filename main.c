@@ -57,8 +57,7 @@ int main()
     task_init(1, task_hex);
 
     current_task = 0;
-
-    yield();
+    start_first_task(&tasks[0]);
 
     while (1)
         ; // 理论上永远不会回到这里

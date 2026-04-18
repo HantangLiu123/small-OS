@@ -19,6 +19,7 @@ typedef struct
 extern void switch_to(TCB *old_task, TCB *new_task);
 extern void interrupt_init(void);
 extern void yield(void);
+extern void start_first_task(TCB *task);
 
 // 内核 C 接口
 void task_init(int id, void (*func)(void));

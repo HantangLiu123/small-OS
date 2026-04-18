@@ -1,6 +1,7 @@
 .section .text
 .global interrupt_init
 .global yield
+.global start_first_task
 .extern c_trap_handler
 
 interrupt_init:
@@ -122,3 +123,45 @@ trap_entry:
 yield:
     li a7, 0
     ecall
+
+# void start_first_task(TCB *task)
+start_first_task:
+    mv t6, a0
+
+    lw ra,   0(t6)
+    lw sp,   4(t6)
+    lw gp,   8(t6)
+    lw tp,   12(t6)
+    lw t0,   16(t6)
+    lw t1,   20(t6)
+    lw t2,   24(t6)
+    lw s0,   28(t6)
+    lw s1,   32(t6)
+    lw a0,   36(t6)
+    lw a1,   40(t6)
+    lw a2,   44(t6)
+    lw a3,   48(t6)
+    lw a4,   52(t6)
+    lw a5,   56(t6)
+    lw a6,   60(t6)
+    lw a7,   64(t6)
+    lw s2,   68(t6)
+    lw s3,   72(t6)
+    lw s4,   76(t6)
+    lw s5,   80(t6)
+    lw s6,   84(t6)
+    lw s7,   88(t6)
+    lw s8,   92(t6)
+    lw s9,   96(t6)
+    lw s10,  100(t6)
+    lw s11,  104(t6)
+    lw t3,   108(t6)
+    lw t4,   112(t6)
+
+    lw t5, 124(t6)
+    csrw mepc, t5
+
+    lw t5,   116(t6)
+    lw t6,   120(t6)
+
+    mret
