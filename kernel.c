@@ -30,7 +30,7 @@ TCB *c_trap_handler(TCB *current)
 
         switch (code)
         {
-        case 11:
+        case 16:
             // timer interrupt
             TimerDevice *timer = (TimerDevice *)TIMER_BASE;
             timer->status = 0;
