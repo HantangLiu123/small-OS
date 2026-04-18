@@ -56,7 +56,6 @@ int main()
     task_init(0, task_led);
     task_init(1, task_hex);
 
-    uint32_t dummy_sp;
     current_task = 0;
 
     yield();
