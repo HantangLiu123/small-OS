@@ -11,23 +11,63 @@ typedef struct
     volatile uint32_t period_h;
 } TimerDevice;
 
-uint32_t c_trap_handler(void)
+static TCB *schedule(TCB *current)
+{
+    int next = (current_task + 1) % active_tasks;
+    current_task = next;
+    return &tasks[next];
+}
+
+TCB *c_trap_handler(TCB *current)
 {
     uint32_t mcause;
-    uint32_t yield_req = 0;
     __asm__ volatile("csrr %0, mcause" : "=r"(mcause));
 
+    // interrupt?
     if (mcause & 0x80000000)
     {
         uint32_t code = mcause & 0x7FFFFFFF;
-        if (code == 11)
-        { // 外部中断
+
+        switch (code)
+        {
+        case 11:
+            // timer interrupt
             TimerDevice *timer = (TimerDevice *)TIMER_BASE;
             timer->status = 0;
-            yield_req = 1; // 标记需要切换
+            return schedule(current);
+
+        default:
+            return current;
         }
     }
-    return yield_req;
+
+    // exception
+    switch (mcause)
+    {
+    case 11: {                                   // ecall
+        uint32_t syscall_id = current->regs[16]; // a7
+
+        // 跳过 ecall
+        current->mepc += 4;
+
+        if (syscall_id == 0)
+        { // yield
+            return schedule(current);
+        }
+
+        return current;
+    }
+
+    default:
+        while (1)
+            ; // panic
+    }
+}
+
+static void task_exit()
+{
+    while (1)
+        ;
 }
 
 void timer_init(uint32_t period)
@@ -47,21 +87,13 @@ void task_init(int id, void (*func)(void))
         return;
 
     uint32_t *sp = &task_stacks[id][STACK_SIZE];
-    sp -= 31;
-
-    sp[30] = (uint32_t)func; // ra
-    sp[29] = (uint32_t)func;
-    tasks[id].sp = (uint32_t)sp;
+    sp = (uint32_t *)((uint32_t)sp & ~0xF);
+    for (int i = 0; i < TASK_REG_NUM; i++)
+        tasks[id].regs[i] = 0;
+    tasks[id].regs[0] = (uint32_t)task_exit;
+    tasks[id].regs[1] = (uint32_t)sp;
+    tasks[id].mepc = (uint32_t)func;
 
     if (id >= active_tasks)
         active_tasks = id + 1;
-}
-
-void yield()
-{
-    int mstatus_value = 0x8;
-    __asm__ volatile("csrci mstatus, 0x8"); // 关中断保护临界区
-    int old = current_task;
-    current_task = (current_task + 1) % MAX_TASKS;
-    switch_to(&tasks[old].sp, tasks[current_task].sp);
 }

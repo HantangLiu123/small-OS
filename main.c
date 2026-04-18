@@ -2,7 +2,7 @@
 #include "os.h"
 
 TCB tasks[MAX_TASKS];
-uint32_t task_stacks[MAX_TASKS][STACK_SIZE];
+uint32_t task_stacks[MAX_TASKS][STACK_SIZE] __attribute__((aligned(16)));
 int current_task = 0;
 int active_tasks = 0; // 记录实际注册的任务数
 
@@ -50,19 +50,16 @@ void task_hex()
 int main()
 {
     __asm__ volatile("csrci mstatus, 0x8");
-    // 1. 初始化任务
+    timer_init(50000000);
+    interrupt_init();
+    // 初始化任务
     task_init(0, task_led);
     task_init(1, task_hex);
 
-    // 2. 启动第一个任务
-    // 我们需要一个临时变量来保存当前的上下文（虽然这个上下文再也不会被用到了）
     uint32_t dummy_sp;
     current_task = 0;
-    timer_init(50000000);
-    interrupt_init();
 
-    // 从这里“跳”进任务 0 的代码世界
-    switch_to(&dummy_sp, tasks[0].sp);
+    yield();
 
     while (1)
         ; // 理论上永远不会回到这里

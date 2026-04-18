@@ -6,19 +6,21 @@
 
 #define MAX_TASKS 3
 #define STACK_SIZE 1024
+#define TASK_REG_NUM 31
 
 // 任务控制块
 typedef struct
 {
-    uint32_t sp;
+    uint32_t regs[TASK_REG_NUM];
+    uint32_t mepc;
 } TCB;
 
 // 外部汇编接口
-extern void switch_to(uint32_t *old_sp, uint32_t new_sp);
+extern void switch_to(TCB *old_task, TCB *new_task);
 extern void interrupt_init(void);
+extern void yield(void);
 
 // 内核 C 接口
-void yield(void);
 void task_init(int id, void (*func)(void));
 void timer_init(uint32_t period);
 
