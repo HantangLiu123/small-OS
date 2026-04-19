@@ -15,6 +15,15 @@ typedef struct
     uint32_t mepc;
 } TCB;
 
+typedef enum
+{
+    UNUSED = 0,
+    READY,
+    RUNNING,
+    BLOCKED,
+    DEAD
+} TaskState;
+
 // 外部汇编接口
 extern void switch_to(TCB *old_task, TCB *new_task);
 extern void interrupt_init(void);
@@ -22,13 +31,16 @@ extern void yield(void);
 extern void start_first_task(TCB *task);
 
 // 内核 C 接口
-void task_init(int id, void (*func)(void));
+void tcb_init(int id, void (*func)(void));
 void timer_init(uint32_t period);
+int task_create(void (*func)(void));
+void init_task_states();
+int task_kill(int id);
 
 // 全局变量声明
 extern TCB tasks[MAX_TASKS];
 extern uint32_t task_stacks[MAX_TASKS][STACK_SIZE];
+extern TaskState task_states[MAX_TASKS];
 extern int current_task;
-extern int active_tasks;
 
 #endif

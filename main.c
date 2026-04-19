@@ -3,8 +3,8 @@
 
 TCB tasks[MAX_TASKS];
 uint32_t task_stacks[MAX_TASKS][STACK_SIZE] __attribute__((aligned(16)));
+TaskState task_states[MAX_TASKS];
 int current_task = 0;
-int active_tasks = 0; // 记录实际注册的任务数
 
 // 任务 0：流水灯 (保持不变)
 void task_led()
@@ -20,7 +20,7 @@ void task_led()
 
         for (volatile int i = 0; i < 200000; i++)
             ; // 增加延时防止切得太快
-        //yield();
+        // yield();
     }
 }
 
@@ -50,10 +50,11 @@ void task_hex()
 int main()
 {
     int mie_value = 0x8;
-    __asm__ volatile("csrc mstatus, %0"::"r"(mie_value));
+    __asm__ volatile("csrc mstatus, %0" ::"r"(mie_value));
     // 初始化任务
-    task_init(0, task_led);
-    task_init(1, task_hex);
+    init_task_states();
+    task_create(task_led);
+    task_create(task_hex);
     timer_init(100000);
     interrupt_init();
 
