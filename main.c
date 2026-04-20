@@ -3,8 +3,7 @@
 
 TCB tasks[MAX_TASKS];
 uint32_t task_stacks[MAX_TASKS][STACK_SIZE] __attribute__((aligned(16)));
-TaskState task_states[MAX_TASKS];
-int current_task = 0;
+TCB *current_task = 0;
 
 // 任务 0：流水灯 (保持不变)
 void task_led()

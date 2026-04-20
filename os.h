@@ -13,6 +13,8 @@ typedef struct
 {
     uint32_t regs[TASK_REG_NUM];
     uint32_t mepc;
+    TaskState state;
+    int id;
 } TCB;
 
 typedef enum
@@ -25,7 +27,6 @@ typedef enum
 } TaskState;
 
 // 外部汇编接口
-extern void switch_to(TCB *old_task, TCB *new_task);
 extern void interrupt_init(void);
 extern void yield(void);
 extern void start_first_task(TCB *task);
@@ -40,7 +41,6 @@ int task_kill(int id);
 // 全局变量声明
 extern TCB tasks[MAX_TASKS];
 extern uint32_t task_stacks[MAX_TASKS][STACK_SIZE];
-extern TaskState task_states[MAX_TASKS];
-extern int current_task;
+extern TCB *current_task;
 
 #endif

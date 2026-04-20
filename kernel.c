@@ -14,15 +14,14 @@ typedef struct
 
 static TCB *schedule(TCB *current)
 {
-    int current_id = (int)(current - tasks);
-    task_states[current_id] = READY;
+    current->state = READY;
     for (int i = 0; i < MAX_TASKS; i++)
     {
-        int next = (current_task + 1 + i) % MAX_TASKS;
-        if (task_states[next] == READY)
+        int next_id = (current->id + 1 + i) % MAX_TASKS;
+        if (tasks[next_id].state == READY)
         {
-            task_states[next] = RUNNING;
-            return &tasks[next];
+            tasks[next_id].state = RUNNING;
+            return &tasks[next_id];
         }
     }
     // should not happen
@@ -79,7 +78,7 @@ static void task_exit()
 {
     int mie_value = 0x8;
     __asm__ volatile("csrc mstatus, %0" ::"r"(mie_value));
-    task_states[current_task] = DEAD;
+    current_task->state = DEAD;
     __asm__ volatile("csrs mstatus, %0" ::"r"(mie_value));
 
     yield();
@@ -107,13 +106,15 @@ void tcb_init(int id, void (*func)(void))
     tasks[id].regs[0] = (uint32_t)task_exit;
     tasks[id].regs[1] = (uint32_t)sp;
     tasks[id].mepc = (uint32_t)func;
+    tasks[id].id = id;
+    tasks[id].state = READY;
 }
 
 static int find_free_slot()
 {
     for (int i = 0; i < MAX_TASKS; i++)
     {
-        if (task_states[i] == UNUSED || task_states[i] == DEAD)
+        if (current_task->state == UNUSED || current_task->state == DEAD)
             return i;
     }
     return -1;
@@ -129,7 +130,7 @@ int task_create(void (*func)(void))
         goto task_create_cleanup;
 
     tcb_init(id, func);
-    task_states[id] = READY;
+    tasks[id].state = READY;
 
 task_create_cleanup:
     __asm__ volatile("csrs mstatus, %0" ::"r"(mie_value));
@@ -139,7 +140,7 @@ task_create_cleanup:
 void init_task_states()
 {
     for (int i = 0; i < MAX_TASKS; i++)
-        task_states[i] = UNUSED;
+        tasks[i].state = UNUSED;
 }
 
 int task_kill(int id)
@@ -150,13 +151,13 @@ int task_kill(int id)
     int mie_value = 0x8;
     __asm__ volatile("csrc mstatus, %0" ::"r"(mie_value));
 
-    if (task_states[id] == UNUSED || task_states[id] == DEAD)
+    if (tasks[id].state == UNUSED || tasks[id].state == DEAD)
         goto task_kill_cleanup;
 
     if (id == current_task)
         task_exit();
 
-    task_states[id] == DEAD;
+    tasks[id].state == DEAD;
 task_kill_cleanup:
     __asm__ volatile("csrs mstatus, %0" ::"r"(mie_value));
     return 0;
