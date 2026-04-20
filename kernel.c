@@ -21,6 +21,7 @@ static TCB *schedule(TCB *current)
         if (tasks[next_id].state == READY)
         {
             tasks[next_id].state = RUNNING;
+            current_task = &tasks[next_id];
             return &tasks[next_id];
         }
     }
