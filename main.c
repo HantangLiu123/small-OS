@@ -57,7 +57,7 @@ int main()
     timer_init(100000);
     interrupt_init();
 
-    current_task = 0;
+    current_task = &tasks[0];
     start_first_task(&tasks[0]);
 
     while (1)
