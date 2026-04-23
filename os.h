@@ -8,15 +8,6 @@
 #define STACK_SIZE 1024
 #define TASK_REG_NUM 31
 
-// 任务控制块
-typedef struct
-{
-    uint32_t regs[TASK_REG_NUM];
-    uint32_t mepc;
-    TaskState state;
-    int id;
-} TCB;
-
 typedef enum
 {
     UNUSED = 0,
@@ -25,6 +16,15 @@ typedef enum
     BLOCKED,
     DEAD
 } TaskState;
+
+// 任务控制块
+typedef struct
+{
+    uint32_t regs[TASK_REG_NUM];
+    uint32_t mepc;
+    TaskState state;
+    int id;
+} TCB;
 
 // 外部汇编接口
 extern void interrupt_init(void);
