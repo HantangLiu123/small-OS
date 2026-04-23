@@ -75,12 +75,25 @@ TCB *c_trap_handler(TCB *current)
     }
 }
 
-static void task_exit()
+static inline uint32_t irq_save()
 {
+    uint32_t mstatus;
+    __asm__ volatile("csrr %0, mstatus": "=r"(mstatus));
     int mie_value = 0x8;
     __asm__ volatile("csrc mstatus, %0" ::"r"(mie_value));
+    return mstatus;
+}
+
+static inline void irq_restore(uint32_t mstatus)
+{
+    __asm__ volatile("csrw mstatus, %0" ::"r"(mstatus));
+}
+
+static void task_exit()
+{
+    uint32_t flags = irq_save();
     current_task->state = DEAD;
-    __asm__ volatile("csrs mstatus, %0" ::"r"(mie_value));
+    irq_restore(flags);
 
     yield();
     while (1)
@@ -123,8 +136,7 @@ static int find_free_slot()
 
 int task_create(void (*func)(void))
 {
-    int mie_value = 0x8;
-    __asm__ volatile("csrc mstatus, %0" ::"r"(mie_value));
+    uint32_t flags = irq_save();
 
     int id = find_free_slot();
     if (id < 0)
@@ -134,7 +146,7 @@ int task_create(void (*func)(void))
     tasks[id].state = READY;
 
 task_create_cleanup:
-    __asm__ volatile("csrs mstatus, %0" ::"r"(mie_value));
+    irq_restore(flags);
     return id;
 }
 
@@ -149,17 +161,21 @@ int task_kill(int id)
     if (id < 0 || id >= MAX_TASKS)
         return -1;
 
-    int mie_value = 0x8;
-    __asm__ volatile("csrc mstatus, %0" ::"r"(mie_value));
+    uint32_t flags = irq_save();
 
     if (tasks[id].state == UNUSED || tasks[id].state == DEAD)
         goto task_kill_cleanup;
 
-    if (id == current_task->id)
-        task_exit();
-
     tasks[id].state = DEAD;
+
+    if (id == current_task->id)
+    {
+        irq_restore(flags);
+        yield();
+        while (1)
+            ;
+    }
 task_kill_cleanup:
-    __asm__ volatile("csrs mstatus, %0" ::"r"(mie_value));
+    irq_restore(flags);
     return 0;
 }
