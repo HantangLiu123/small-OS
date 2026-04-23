@@ -16,9 +16,13 @@ interrupt_init:
 trap_entry:
     # -------- 找 current task --------
     addi sp, sp, -16
-    sw a0, 0(sp)
+    sw t0, 8(sp)
+    sw a0, 12(sp)
 
-    la a0, current_task
+    la t0, current_task
+    lw a0, (t0)
+
+    lw t0, 8(sp)
 
     # -------- 保存寄存器 --------
     sw ra,   0(a0)
@@ -53,7 +57,7 @@ trap_entry:
     sw t5,   116(a0)
     sw t6,   120(a0)
 
-    lw t0, 0(sp) # original a0
+    lw t0, 12(sp) # original a0
     sw t0, 36(a0)
     addi sp, sp, 16
     sw sp,   4(a0)
