@@ -115,7 +115,7 @@ static int find_free_slot()
 {
     for (int i = 0; i < MAX_TASKS; i++)
     {
-        if (current_task->state == UNUSED || current_task->state == DEAD)
+        if (tasks[i].state == UNUSED || tasks[i].state == DEAD)
             return i;
     }
     return -1;
@@ -155,10 +155,10 @@ int task_kill(int id)
     if (tasks[id].state == UNUSED || tasks[id].state == DEAD)
         goto task_kill_cleanup;
 
-    if (id == current_task)
+    if (id == current_task->id)
         task_exit();
 
-    tasks[id].state == DEAD;
+    tasks[id].state = DEAD;
 task_kill_cleanup:
     __asm__ volatile("csrs mstatus, %0" ::"r"(mie_value));
     return 0;
